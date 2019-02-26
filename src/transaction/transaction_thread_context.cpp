@@ -1,6 +1,6 @@
+#include <utility>
 #include "transaction/transaction_thread_context.h"
 #include "transaction/transaction_context.h"
-#include <iostream>
 
 namespace terrier::transaction {
 
@@ -11,7 +11,6 @@ void TransactionThreadContext::BeginTransaction(timestamp_t t) {
 
 void TransactionThreadContext::Commit(TransactionContext *const txn) {
   common::SpinLatch::ScopedSpinLatch guard(&latch_);
-  // TODO do we need to check this?
   const timestamp_t start_time = txn->StartTime();
   const size_t ret UNUSED_ATTRIBUTE = curr_running_txns_.erase(start_time);
   TERRIER_ASSERT(ret == 1, "Committed transaction did not exist in global transactions table");
