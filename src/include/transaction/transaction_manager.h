@@ -38,10 +38,7 @@ class TransactionManager {
    * @param worker_id  id of the worker thread to be registered
    * @return a constructed TransactionThreadContext with the given id
    */
-  TransactionThreadContext *RegisterWorker(worker_id_t worker_id) {
-    // TODO(Tianyu): Implement
-    return nullptr;
-  }
+  TransactionThreadContext *RegisterWorker(worker_id_t worker_id);
 
   /**
    * Deregisters a worker to the transaction manager so that we no longer expect transactions to begin
@@ -49,9 +46,8 @@ class TransactionManager {
    *
    * @param thread context of the thread to unregister
    */
-  void UnregisterWorker(TransactionThreadContext *thread) {
-    // TODO(Tianyu): Implement
-  }
+  void UnregisterWorker(TransactionThreadContext *thread);
+
   /**
    * Begins a transaction.
    * @param thread_context context for the calling thread
@@ -108,11 +104,18 @@ class TransactionManager {
   common::SharedLatch commit_latch_;
 
   // TODO(Matt): consider a different data structure if this becomes a measured bottleneck
+  // Per-thread transaction context
+  std::unordered_map<worker_id_t, TransactionThreadContext *> thread_ctx_map_;
+  TransactionQueue cleanup_txns_;
+  mutable common::SpinLatch thread_ctx_map_latch_;
+
+  // Original data structures
   std::unordered_set<timestamp_t> curr_running_txns_;
+  TransactionQueue completed_txns_;
   mutable common::SpinLatch curr_running_txns_latch_;
 
+
   bool gc_enabled_ = false;
-  TransactionQueue completed_txns_;
   storage::LogManager *const log_manager_;
 
   timestamp_t ReadOnlyCommitCriticalSection(TransactionContext *txn, transaction::callback_fn callback,

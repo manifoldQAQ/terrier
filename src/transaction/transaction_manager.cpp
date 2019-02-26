@@ -1,6 +1,7 @@
 #include "transaction/transaction_manager.h"
 #include <algorithm>
 #include <utility>
+#include <iostream>
 
 namespace terrier::transaction {
 TransactionContext *TransactionManager::BeginTransaction(TransactionThreadContext *thread_context) {
@@ -17,9 +18,14 @@ TransactionContext *TransactionManager::BeginTransaction(TransactionThreadContex
   // (That is, they may change as concurrent inserts and deletes happen)
   auto *const result =
       new TransactionContext(start_time, start_time + INT64_MIN, buffer_pool_, log_manager_, thread_context);
-  common::SpinLatch::ScopedSpinLatch running_guard(&curr_running_txns_latch_);
-  const auto ret UNUSED_ATTRIBUTE = curr_running_txns_.emplace(result->StartTime());
-  TERRIER_ASSERT(ret.second, "commit start time should be globally unique");
+
+  if (thread_context == nullptr) {
+    common::SpinLatch::ScopedSpinLatch running_guard(&curr_running_txns_latch_);
+    const auto ret UNUSED_ATTRIBUTE = curr_running_txns_.emplace(result->StartTime());
+    TERRIER_ASSERT(ret.second, "commit start time should be globally unique");
+  } else {
+    thread_context->BeginTransaction(result->StartTime());
+  }
   return result;
 }
 
@@ -87,7 +93,10 @@ timestamp_t TransactionManager::Commit(TransactionContext *const txn, transactio
                                        void *callback_arg) {
   const timestamp_t result = txn->undo_buffer_.Empty() ? ReadOnlyCommitCriticalSection(txn, callback, callback_arg)
                                                        : UpdatingCommitCriticalSection(txn, callback, callback_arg);
-  {
+
+  TransactionThreadContext *thread_ctx = txn->GetThreadContext();
+
+  if (thread_ctx == nullptr) {
     // In a critical section, remove this transaction from the table of running transactions
     common::SpinLatch::ScopedSpinLatch guard(&curr_running_txns_latch_);
     const timestamp_t start_time = txn->StartTime();
@@ -97,7 +106,10 @@ timestamp_t TransactionManager::Commit(TransactionContext *const txn, transactio
     // the critical path there anyway
     // Also note here that GC will figure out what varlen entries to GC, as opposed to in the abort case.
     if (gc_enabled_) completed_txns_.push_front(txn);
+  } else {
+    thread_ctx->Commit(txn);
   }
+
   return result;
 }
 
@@ -110,13 +122,17 @@ void TransactionManager::Abort(TransactionContext *const txn) {
   // Discard the redo buffer that is not yet logged out
   txn->redo_buffer_.Finalize(false);
   txn->log_processed_ = true;
-  {
+
+  TransactionThreadContext *thread_ctx = txn->GetThreadContext();
+  if (thread_ctx == nullptr) {
     // In a critical section, remove this transaction from the table of running transactions
     common::SpinLatch::ScopedSpinLatch guard(&curr_running_txns_latch_);
     const timestamp_t start_time = txn->StartTime();
     const size_t ret UNUSED_ATTRIBUTE = curr_running_txns_.erase(start_time);
     TERRIER_ASSERT(ret == 1, "Aborted transaction did not exist in global transactions table");
-    if (gc_enabled_) completed_txns_.push_front(txn);
+    if (gc_enabled_) cleanup_txns_.push_front(txn);
+  } else {
+    thread_ctx->Abort(txn);
   }
 }
 
@@ -155,16 +171,44 @@ void TransactionManager::GCLastUpdateOnAbort(TransactionContext *const txn) {
 }
 
 timestamp_t TransactionManager::OldestTransactionStartTime() const {
-  common::SpinLatch::ScopedSpinLatch guard(&curr_running_txns_latch_);
-  const auto &oldest_txn = std::min_element(curr_running_txns_.cbegin(), curr_running_txns_.cend());
-  const timestamp_t result = (oldest_txn != curr_running_txns_.end()) ? *oldest_txn : time_.load();
-  return result;
+  timestamp_t curr_timestamp = time_.load();
+  timestamp_t oldest_txn = curr_timestamp;
+  {
+    // case for threaded execution
+    common::SpinLatch::ScopedSpinLatch guard(&thread_ctx_map_latch_);
+    for (auto it : thread_ctx_map_) {
+      std::optional<timestamp_t> ts = it.second->OldestTransactionStartTime();
+      if (ts.has_value()) {
+        oldest_txn = std::min(ts.value(), oldest_txn);
+      }
+    }
+  }
+  {
+    // case for normal execution
+    common::SpinLatch::ScopedSpinLatch guard(&curr_running_txns_latch_);
+    const auto &local_oldest = std::min_element(curr_running_txns_.cbegin(), curr_running_txns_.cend());
+    oldest_txn = (local_oldest != curr_running_txns_.end()) ? *local_oldest : oldest_txn;
+  }
+  return oldest_txn;
 }
 
 TransactionQueue TransactionManager::CompletedTransactionsForGC() {
-  common::SpinLatch::ScopedSpinLatch guard(&curr_running_txns_latch_);
-  TransactionQueue hand_to_gc(std::move(completed_txns_));
-  TERRIER_ASSERT(completed_txns_.empty(), "TransactionManager's queue should now be empty.");
+  TransactionQueue hand_to_gc;
+  {
+    // threaded gc
+    common::SpinLatch::ScopedSpinLatch guard(&thread_ctx_map_latch_);
+    for (auto it : thread_ctx_map_) {
+      TransactionQueue tmp = it.second->HandCompletedTransactions();
+      hand_to_gc.splice_after(hand_to_gc.before_begin(), tmp);
+    }
+    hand_to_gc.splice_after(hand_to_gc.before_begin(), cleanup_txns_);
+  }
+  {
+    // normal gc
+    common::SpinLatch::ScopedSpinLatch guard(&curr_running_txns_latch_);
+    hand_to_gc.splice_after(hand_to_gc.before_begin(), completed_txns_);
+    TERRIER_ASSERT(completed_txns_.empty(), "TransactionManager's queue should now be empty.");
+  }
   return hand_to_gc;
 }
 
@@ -237,5 +281,22 @@ void TransactionManager::DeallocateInsertedTupleIfVarlen(TransactionContext *txn
       }
     }
   }
+}
+
+TransactionThreadContext *TransactionManager::RegisterWorker(worker_id_t worker_id) {
+  // TODO(Tianyu): Implement
+  common::SpinLatch::ScopedSpinLatch ctx_guard(&thread_ctx_map_latch_);
+  return thread_ctx_map_[worker_id] = new TransactionThreadContext(worker_id, gc_enabled_);
+}
+void TransactionManager::UnregisterWorker(TransactionThreadContext *thread) {
+  // TODO(Tianyu): Implement
+  common::SpinLatch::ScopedSpinLatch ctx_guard(&thread_ctx_map_latch_);
+  auto it = thread_ctx_map_.find(thread->GetWorkerId());
+  if (it == thread_ctx_map_.end()) return;
+  TransactionThreadContext *thread_ctx = it->second;
+  thread_ctx_map_.erase(it);
+  TransactionQueue tmp = thread_ctx->HandCompletedTransactions();
+  cleanup_txns_.splice_after(cleanup_txns_.before_begin(), tmp);
+  delete thread_ctx;
 }
 }  // namespace terrier::transaction
