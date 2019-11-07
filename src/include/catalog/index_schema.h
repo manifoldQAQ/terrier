@@ -22,6 +22,10 @@ namespace terrier::storage {
 class RecoveryManager;
 }
 
+namespace terrier::storage::index {
+class IndexPopulator;
+}
+
 namespace terrier::tpcc {
 class Schemas;
 }
@@ -196,6 +200,7 @@ class IndexSchema {
     friend class postgres::Builder;
 
     friend class tpcc::Schemas;
+    friend class terrier::storage::index::IndexPopulator;
     friend class terrier::StorageTestUtil;
   };
 
