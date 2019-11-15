@@ -76,6 +76,9 @@ class Context;
   NON_PRIM(ProjectedColumnsIterator, terrier::execution::sql::ProjectedColumnsIterator)         \
   NON_PRIM(IndexIterator, terrier::execution::sql::IndexIterator)                               \
                                                                                                 \
+  /* Storage layer types */                                                                     \
+  NON_PRIM(TupleSlot, terrier::storage::TupleSlot)                                              \
+                                                                                                \
   /* SQL Aggregate types (if you add, remember to update BuiltinType) */                        \
   NON_PRIM(CountAggregate, terrier::execution::sql::CountAggregate)                             \
   NON_PRIM(CountStarAggregate, terrier::execution::sql::CountStarAggregate)                     \

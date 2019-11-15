@@ -117,6 +117,7 @@ namespace terrier::execution::vm {
   F(PCIMatch, OperandType::Local, OperandType::Local)                                                                 \
   F(PCIReset, OperandType::Local)                                                                                     \
   F(PCIResetFiltered, OperandType::Local)                                                                             \
+  F(PCIGetTupleSlot, OperandType::Local, OperandType::Local)                                                          \
   F(PCIGetTinyInt, OperandType::Local, OperandType::Local, OperandType::UImm2)                                        \
   F(PCIGetSmallInt, OperandType::Local, OperandType::Local, OperandType::UImm2)                                       \
   F(PCIGetInteger, OperandType::Local, OperandType::Local, OperandType::UImm2)                                        \

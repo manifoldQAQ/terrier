@@ -598,6 +598,12 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   // PCI element access
   // -------------------------------------------------------
 
+  OP(PCIGetTupleSlot) : {
+    auto *iter = frame->LocalAt<sql::ProjectedColumnsIterator *>(READ_LOCAL_ID());
+    OpPCIGetTupleSlot(iter);
+    DISPATCH_NEXT();
+  }
+
 #define GEN_PCI_ACCESS(type_str, type)                                            \
   OP(PCIGet##type_str) : {                                                        \
     auto *result = frame->LocalAt<type *>(READ_LOCAL_ID());                       \

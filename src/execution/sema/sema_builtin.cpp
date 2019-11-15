@@ -1002,6 +1002,10 @@ void Sema::CheckBuiltinPCICall(ast::CallExpr *call, ast::Builtin builtin) {
       call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
       break;
     }
+    case ast::Builtin::PCIGetTupleSlot: {
+      call->SetType(GetBuiltinType(ast::BuiltinType::TupleSlot));
+      break;
+    }
     case ast::Builtin::PCIGetTinyInt:
     case ast::Builtin::PCIGetTinyIntNull:
     case ast::Builtin::PCIGetSmallInt:
@@ -2260,6 +2264,7 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::PCIMatch:
     case ast::Builtin::PCIReset:
     case ast::Builtin::PCIResetFiltered:
+    case ast::Builtin::PCIGetTupleSlot:
     case ast::Builtin::PCIGetTinyInt:
     case ast::Builtin::PCIGetTinyIntNull:
     case ast::Builtin::PCIGetSmallInt:
