@@ -599,6 +599,12 @@ void BytecodeGenerator::VisitBuiltinPCICall(ast::CallExpr *call, ast::Builtin bu
       Emitter()->Emit(bytecode, pci);
       break;
     }
+    case ast::Builtin::PCIGetTupleSlot: {
+      LocalVar ts = ExecutionResult()->GetOrCreateDestination(ast::BuiltinType::Get(ctx, ast::BuiltinType::TupleSlot));
+      Emitter()->Emit(Bytecode::PCIGetTupleSlot, ts, pci);
+      ExecutionResult()->SetDestination(ts.ValueOf());
+      break;
+    }
     case ast::Builtin::PCIGetTinyInt: {
       LocalVar val = ExecutionResult()->GetOrCreateDestination(ast::BuiltinType::Get(ctx, ast::BuiltinType::Integer));
       auto col_idx = static_cast<uint16_t>(call->Arguments()[1]->As<ast::LitExpr>()->Int64Val());
@@ -1656,6 +1662,7 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::PCIMatch:
     case ast::Builtin::PCIReset:
     case ast::Builtin::PCIResetFiltered:
+    case ast::Builtin::PCIGetTupleSlot:
     case ast::Builtin::PCIGetTinyInt:
     case ast::Builtin::PCIGetTinyIntNull:
     case ast::Builtin::PCIGetSmallInt:

@@ -48,6 +48,7 @@ namespace terrier::execution::ast {
   F(PCIMatch, pciMatch)                                               \
   F(PCIReset, pciReset)                                               \
   F(PCIResetFiltered, pciResetFiltered)                               \
+  F(PCIGetTupleSlot, pciGetTupleSlot)                                 \
   F(PCIGetTinyInt, pciGetTinyInt)                                     \
   F(PCIGetSmallInt, pciGetSmallInt)                                   \
   F(PCIGetInt, pciGetInt)                                             \
