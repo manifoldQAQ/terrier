@@ -602,7 +602,6 @@ void BytecodeGenerator::VisitBuiltinPCICall(ast::CallExpr *call, ast::Builtin bu
     case ast::Builtin::PCIGetTupleSlot: {
       LocalVar ts = ExecutionResult()->GetOrCreateDestination(ast::BuiltinType::Get(ctx, ast::BuiltinType::TupleSlot));
       Emitter()->Emit(Bytecode::PCIGetTupleSlot, ts, pci);
-      ExecutionResult()->SetDestination(ts.ValueOf());
       break;
     }
     case ast::Builtin::PCIGetTinyInt: {
@@ -1785,6 +1784,49 @@ void BytecodeGenerator::VisitBuiltinInserterCall(ast::CallExpr *call, ast::Built
   }
 }
 
+void BytecodeGenerator::VisitBuiltinIndexCreatorCall(ast::CallExpr *call, ast::Builtin builtin) {
+  ast::Context *ctx = call->GetType()->GetContext();
+  LocalVar index_creator = VisitExpressionForRValue(call->Arguments()[0]);
+
+  switch (builtin) {
+    case ast::Builtin::IndexCreatorInit: {
+      LocalVar exec_ctx = VisitExpressionForRValue(call->Arguments()[1]);
+      auto index_oid = static_cast<uint32_t>(call->Arguments()[2]->As<ast::LitExpr>()->Int64Val());
+      auto unique = call->Arguments()[3]->As<ast::LitExpr>()->BoolVal();
+      Emitter()->EmitIndexCreatorInit(Bytecode::IndexCreatorInit, index_creator, exec_ctx, index_oid, unique);
+      break;
+    }
+    case ast::Builtin::IndexCreatorInitBind: {
+      LocalVar exec_ctx = VisitExpressionForRValue(call->Arguments()[1]);
+      ast::Identifier index_name = call->Arguments()[2]->As<ast::LitExpr>()->RawStringVal();
+      auto index_oid = exec_ctx_->GetAccessor()->GetIndexOid(index_name.Data());
+      auto unique = call->Arguments()[3]->As<ast::LitExpr>()->BoolVal();
+      Emitter()->EmitIndexCreatorInit(Bytecode::IndexCreatorInit, index_creator, exec_ctx, !index_oid, unique);
+      break;
+    }
+    case ast::Builtin::IndexCreatorGetIndexPR: {
+      ast::Type *pr_type = ast::BuiltinType::Get(ctx, ast::BuiltinType::ProjectedRow);
+      LocalVar out = ExecutionResult()->GetOrCreateDestination(pr_type);
+      Emitter()->EmitIndexCreatorGetIndexPR(Bytecode::IndexCreatorGetIndexPR, out, index_creator);
+      break;
+    }
+    case ast::Builtin::IndexCreatorIndexInsert: {
+      ast::Type *ok_type = ast::BuiltinType::Get(ctx, ast::BuiltinType::Bool);
+      LocalVar ok = ExecutionResult()->GetOrCreateDestination(ok_type);
+      LocalVar index_pr = VisitExpressionForRValue(call->Arguments()[1]);
+      LocalVar ts = VisitExpressionForRValue(call->Arguments()[2]);
+      Emitter()->EmitIndexCreatorIndexInsert(Bytecode::IndexCreatorIndexInsert, ok, index_creator, index_pr, ts);
+      break;
+    }
+    case ast::Builtin::IndexCreatorFree: {
+      Emitter()->EmitIndexCreatorFree(Bytecode::IndexCreatorFree, index_creator);
+      break;
+    }
+    default:
+      UNREACHABLE("Undefined index creator call!");
+  }
+}
+
 void BytecodeGenerator::VisitBuiltinDeleterCall(ast::CallExpr *call, ast::Builtin builtin) {
   ast::Context *ctx = call->GetType()->GetContext();
   LocalVar deleter = VisitExpressionForRValue(call->Arguments()[0]);
@@ -2188,6 +2230,16 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
       VisitBuiltinInserterCall(call, builtin);
       break;
     }
+
+    case ast::Builtin::IndexCreatorInit:
+    case ast::Builtin::IndexCreatorInitBind:
+    case ast::Builtin::IndexCreatorGetIndexPR:
+    case ast::Builtin::IndexCreatorIndexInsert:
+    case ast::Builtin::IndexCreatorFree: {
+      VisitBuiltinIndexCreatorCall(call, builtin);
+      break;
+    }
+
     case ast::Builtin::DeleterInit:
     case ast::Builtin::DeleterInitBind:
     case ast::Builtin::DeleterTableDelete:

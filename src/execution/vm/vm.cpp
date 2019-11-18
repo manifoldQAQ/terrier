@@ -599,8 +599,9 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   // -------------------------------------------------------
 
   OP(PCIGetTupleSlot) : {
-    auto *iter = frame->LocalAt<sql::ProjectedColumnsIterator *>(READ_LOCAL_ID());
-    OpPCIGetTupleSlot(iter);
+    auto *out = frame->LocalAt<storage::TupleSlot *>(READ_LOCAL_ID());
+    auto *pci = frame->LocalAt<sql::ProjectedColumnsIterator *>(READ_LOCAL_ID());
+    OpPCIGetTupleSlot(out, pci);
     DISPATCH_NEXT();
   }
 
@@ -1570,6 +1571,45 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {
   OP(InserterFree) : {
     auto *inserter = frame->LocalAt<sql::Inserter *>(READ_LOCAL_ID());
     OpInserterFree(inserter);
+    DISPATCH_NEXT();
+  }
+
+  /////////////////////////////////
+  //// IndexCreator Calls
+  /////////////////////////////////
+
+  OP(IndexCreatorInit) : {
+    auto *index_creator = frame->LocalAt<sql::IndexCreator *>(READ_LOCAL_ID());
+    auto *exec_ctx = frame->LocalAt<exec::ExecutionContext *>(READ_LOCAL_ID());
+    auto index_oid = READ_UIMM4();
+    auto unique = READ_IMM1();
+
+    OpIndexCreatorInit(index_creator, exec_ctx, index_oid, unique);
+    DISPATCH_NEXT();
+  }
+
+  OP(IndexCreatorGetIndexPR) : {
+    auto *index_pr = frame->LocalAt<sql::ProjectedRowWrapper *>(READ_LOCAL_ID());
+    auto *index_creator = frame->LocalAt<sql::IndexCreator *>(READ_LOCAL_ID());
+
+    OpIndexCreatorGetIndexPR(index_pr, index_creator);
+    DISPATCH_NEXT();
+  }
+
+  OP(IndexCreatorIndexInsert) : {
+    auto ret = frame->LocalAt<bool *>(READ_LOCAL_ID());
+    auto *index_creator = frame->LocalAt<sql::IndexCreator *>(READ_LOCAL_ID());
+    auto *index_pr = frame->LocalAt<sql::ProjectedRowWrapper *>(READ_LOCAL_ID());
+    auto *tuple_slot = frame->LocalAt<storage::TupleSlot *>(READ_LOCAL_ID());
+
+    OpIndexCreatorIndexInsert(ret, index_creator, index_pr, tuple_slot);
+    DISPATCH_NEXT();
+  }
+
+  OP(IndexCreatorFree) : {
+    auto *index_creator = frame->LocalAt<sql::IndexCreator *>(READ_LOCAL_ID());
+
+    OpIndexCreatorFree(index_creator);
     DISPATCH_NEXT();
   }
 

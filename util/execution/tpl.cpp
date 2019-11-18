@@ -197,53 +197,53 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
   //
   // Adaptive
   //
-
-  {
-    util::ScopedTimer<std::milli> timer(&adaptive_exec_ms);
-
-    if (is_sql) {
-      std::function<int64_t(exec::ExecutionContext *)> main;
-      if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, &main)) {
-        EXECUTION_LOG_ERROR(
-            "Missing 'main' entry function with signature "
-            "(*ExecutionContext)->int64");
-        return;
-      }
-      EXECUTION_LOG_INFO("ADAPTIVE main() returned: {}", main(&exec_ctx));
-    } else {
-      std::function<int64_t()> main;
-      if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, &main)) {
-        EXECUTION_LOG_ERROR("Missing 'main' entry function with signature ()->int64");
-        return;
-      }
-      EXECUTION_LOG_INFO("ADAPTIVE main() returned: {}", main());
-    }
-  }
+//
+//  {
+//    util::ScopedTimer<std::milli> timer(&adaptive_exec_ms);
+//
+//    if (is_sql) {
+//      std::function<int64_t(exec::ExecutionContext *)> main;
+//      if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, &main)) {
+//        EXECUTION_LOG_ERROR(
+//            "Missing 'main' entry function with signature "
+//            "(*ExecutionContext)->int64");
+//        return;
+//      }
+//      EXECUTION_LOG_INFO("ADAPTIVE main() returned: {}", main(&exec_ctx));
+//    } else {
+//      std::function<int64_t()> main;
+//      if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, &main)) {
+//        EXECUTION_LOG_ERROR("Missing 'main' entry function with signature ()->int64");
+//        return;
+//      }
+//      EXECUTION_LOG_INFO("ADAPTIVE main() returned: {}", main());
+//    }
+//  }
 
   //
   // JIT
   //
-  {
-    util::ScopedTimer<std::milli> timer(&jit_exec_ms);
-
-    if (is_sql) {
-      std::function<int64_t(exec::ExecutionContext *)> main;
-      if (!module->GetFunction("main", vm::ExecutionMode::Compiled, &main)) {
-        EXECUTION_LOG_ERROR(
-            "Missing 'main' entry function with signature "
-            "(*ExecutionContext)->int64");
-        return;
-      }
-      EXECUTION_LOG_INFO("JIT main() returned: {}", main(&exec_ctx));
-    } else {
-      std::function<int64_t()> main;
-      if (!module->GetFunction("main", vm::ExecutionMode::Compiled, &main)) {
-        EXECUTION_LOG_ERROR("Missing 'main' entry function with signature ()->int64");
-        return;
-      }
-      EXECUTION_LOG_INFO("JIT main() returned: {}", main());
-    }
-  }
+//  {
+//    util::ScopedTimer<std::milli> timer(&jit_exec_ms);
+//
+//    if (is_sql) {
+//      std::function<int64_t(exec::ExecutionContext *)> main;
+//      if (!module->GetFunction("main", vm::ExecutionMode::Compiled, &main)) {
+//        EXECUTION_LOG_ERROR(
+//            "Missing 'main' entry function with signature "
+//            "(*ExecutionContext)->int64");
+//        return;
+//      }
+//      EXECUTION_LOG_INFO("JIT main() returned: {}", main(&exec_ctx));
+//    } else {
+//      std::function<int64_t()> main;
+//      if (!module->GetFunction("main", vm::ExecutionMode::Compiled, &main)) {
+//        EXECUTION_LOG_ERROR("Missing 'main' entry function with signature ()->int64");
+//        return;
+//      }
+//      EXECUTION_LOG_INFO("JIT main() returned: {}", main());
+//    }
+//  }
 
   // Dump stats
   EXECUTION_LOG_INFO(

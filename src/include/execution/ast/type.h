@@ -8,6 +8,7 @@
 #include "common/strong_typedef.h"
 #include "execution/ast/identifier.h"
 #include "execution/sql/deleter.h"
+#include "execution/sql/index_creator.h"
 #include "execution/sql/inserter.h"
 #include "execution/sql/projected_row_wrapper.h"
 #include "execution/sql/updater.h"
@@ -76,9 +77,6 @@ class Context;
   NON_PRIM(ProjectedColumnsIterator, terrier::execution::sql::ProjectedColumnsIterator)         \
   NON_PRIM(IndexIterator, terrier::execution::sql::IndexIterator)                               \
                                                                                                 \
-  /* Storage layer types */                                                                     \
-  NON_PRIM(TupleSlot, terrier::storage::TupleSlot)                                              \
-                                                                                                \
   /* SQL Aggregate types (if you add, remember to update BuiltinType) */                        \
   NON_PRIM(CountAggregate, terrier::execution::sql::CountAggregate)                             \
   NON_PRIM(CountStarAggregate, terrier::execution::sql::CountStarAggregate)                     \
@@ -97,6 +95,7 @@ class Context;
   NON_PRIM(Inserter, terrier::execution::sql::Inserter)                                         \
   NON_PRIM(Deleter, terrier::execution::sql::Deleter)                                           \
   NON_PRIM(Updater, terrier::execution::sql::Updater)                                           \
+  NON_PRIM(IndexCreator, terrier::execution::sql::IndexCreator)                                 \
                                                                                                 \
   /* Non-primitive SQL Runtime Values */                                                        \
   SQL(Boolean, terrier::execution::sql::BoolVal)                                                \

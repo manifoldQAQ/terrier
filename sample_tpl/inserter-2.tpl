@@ -84,7 +84,7 @@ fun main(execCtx: *ExecutionContext) -> int64 {
   @tableIterClose(&tvi)
 
   var ts : TupleSlot = @inserterTableInsert(&inserter)
-  var index_pr : *ProjectedRow = @inserterGetIndexPRBind(&inserter, "index_2")
+  var index_pr : *ProjectedRow = @inserterGetIndexPR  Bind(&inserter, "index_2")
   @prSetSmallInt(index_pr, 0, @prGetSmallInt(table_pr, 3))
 
   // index scan counts before index inserts

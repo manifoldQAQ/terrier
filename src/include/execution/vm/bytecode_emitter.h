@@ -488,6 +488,16 @@ class BytecodeEmitter {
    */
   void EmitInserterIndexInsert(Bytecode bytecode, LocalVar inserter, uint32_t index_oid);
 
+  void EmitIndexCreatorInit(Bytecode bytecode, LocalVar index_creator, LocalVar exec_ctx, uint32_t index_oid,
+                            bool unique);
+
+  void EmitIndexCreatorGetIndexPR(Bytecode bytecode, LocalVar out, LocalVar index_creator);
+
+  void EmitIndexCreatorIndexInsert(Bytecode bytecode, LocalVar ok, LocalVar index_creator, LocalVar index_pr,
+                                   LocalVar tuple_slot);
+
+  void EmitIndexCreatorFree(Bytecode bytecode, LocalVar index_creator);
+
   /**
    * Emit bytecode to init a Deleter.
    */

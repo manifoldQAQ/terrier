@@ -208,6 +208,27 @@ void OpInserterIndexInsert(terrier::execution::sql::Inserter *inserter, uint32_t
 void OpInserterFree(terrier::execution::sql::Inserter *inserter) { inserter->~Inserter(); }
 
 // -------------------------------------------------------------
+// Index Creator
+// -------------------------------------------------------------
+void OpIndexCreatorInit(terrier::execution::sql::IndexCreator *index_creator,
+                        terrier::execution::exec::ExecutionContext *exec_ctx, uint32_t index_oid, bool unique) {
+  new (index_creator) terrier::execution::sql::IndexCreator(exec_ctx, terrier::catalog::index_oid_t(index_oid), unique);
+}
+
+void OpIndexCreatorGetIndexPR(terrier::execution::sql::ProjectedRowWrapper *index_pr,
+                              terrier::execution::sql::IndexCreator *index_creator) {
+  *index_pr = terrier::execution::sql::ProjectedRowWrapper(index_creator->GetIndexPR());
+}
+
+void OpIndexCreatorIndexInsert(bool *flag, terrier::execution::sql::IndexCreator *index_creator,
+                               terrier::execution::sql::ProjectedRowWrapper *index_pr,
+                               terrier::storage::TupleSlot *tuple_slot) {
+  *flag = index_creator->IndexInsert(index_pr->Get(), *tuple_slot);
+}
+
+void OpIndexCreatorFree(terrier::execution::sql::IndexCreator *index_creator) { index_creator->~IndexCreator(); }
+
+// -------------------------------------------------------------
 // Deleter Calls
 // -------------------------------------------------------------
 

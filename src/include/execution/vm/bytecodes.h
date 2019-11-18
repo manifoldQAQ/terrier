@@ -380,6 +380,12 @@ namespace terrier::execution::vm {
   F(InserterIndexInsert, OperandType::Local, OperandType::UImm4)                                                      \
   F(InserterFree, OperandType::Local)                                                                                 \
                                                                                                                       \
+  /* Index Creator */                                                                                                 \
+  F(IndexCreatorInit, OperandType::Local, OperandType::Local, OperandType::UImm4, OperandType::Imm1)                  \
+  F(IndexCreatorGetIndexPR, OperandType::Local, OperandType::Local)                                                                       \
+  F(IndexCreatorIndexInsert, OperandType::Local, OperandType::Local, OperandType::Local, OperandType::Local)                              \
+  F(IndexCreatorFree, OperandType::Local)                                                                             \
+                                                                                                                      \
   /* Deleter */                                                                                                       \
   F(DeleterInit, OperandType::Local, OperandType::Local, OperandType::UImm4)                                          \
   F(DeleterTableDelete, OperandType::Local, OperandType::Local)                                                       \

@@ -2192,6 +2192,116 @@ void Sema::CheckBuiltinInserterCall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 }
 
+void Sema::CheckBuiltinIndexCreatorCall(ast::CallExpr *call, ast::Builtin builtin) {
+  const auto &call_args = call->Arguments();
+
+  const auto index_creator_kind = ast::BuiltinType::IndexCreator;
+  const auto int32_kind = ast::BuiltinType::Int32;
+  const auto bool_kind = ast::BuiltinType::Bool;
+  const auto pr_kind = ast::BuiltinType::ProjectedRow;
+  const auto tuple_slot_kind = ast::BuiltinType::TupleSlot;
+
+  if (!CheckArgCountAtLeast(call, 1)) {
+    return;
+  }
+  if (!IsPointerToSpecificBuiltin(call_args[0]->GetType(), index_creator_kind)) {
+    ReportIncorrectCallArg(call, 0, GetBuiltinType(index_creator_kind)->PointerTo());
+    return;
+  }
+
+  switch (builtin) {
+    case ast::Builtin::IndexCreatorInit: {
+      if (!CheckArgCount(call, 4)) {
+        return;
+      }
+      auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
+      if (!IsPointerToSpecificBuiltin(call_args[1]->GetType(), exec_ctx_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(exec_ctx_kind)->PointerTo());
+        return;
+      }
+
+      // index_oid
+      if (!call_args[2]->IsIntegerLiteral()) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(int32_kind));
+        return;
+      }
+
+      // unique
+      if (!call_args[3]->IsBooleanLiteral()) {
+        ReportIncorrectCallArg(call, 3, GetBuiltinType(bool_kind));
+        return;
+      }
+
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::IndexCreatorInitBind: {
+      if (!CheckArgCount(call, 4)) {
+        return;
+      }
+      auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
+      if (!IsPointerToSpecificBuiltin(call_args[1]->GetType(), exec_ctx_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(exec_ctx_kind)->PointerTo());
+        return;
+      }
+
+      // index_name
+      if (!call_args[2]->IsStringLiteral()) {
+        ReportIncorrectCallArg(call, 2, ast::StringType::Get(GetContext()));
+        return;
+      }
+
+      // unique
+      if (!call_args[3]->IsBooleanLiteral()) {
+        ReportIncorrectCallArg(call, 3, ast::StringType::Get(GetContext()));
+        return;
+      }
+
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    case ast::Builtin::IndexCreatorGetIndexPR: {
+      if (!CheckArgCount(call, 1)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::ProjectedRow));
+      break;
+    }
+    case ast::Builtin::IndexCreatorIndexInsert: {
+      if (!CheckArgCount(call, 3)) {
+        return;
+      }
+
+      // index_pr
+      if (!IsPointerToSpecificBuiltin(call_args[1]->GetType(), pr_kind)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(pr_kind)->PointerTo());
+        return;
+      }
+
+      // ts
+      if (!IsPointerToSpecificBuiltin(call_args[2]->GetType(), tuple_slot_kind)) {
+        ReportIncorrectCallArg(call, 2, GetBuiltinType(tuple_slot_kind)->PointerTo());
+        return;
+      }
+
+      call->SetType(GetBuiltinType(ast::BuiltinType::Bool));
+      break;
+    }
+    case ast::Builtin::IndexCreatorFree: {
+      if (!CheckArgCount(call, 1)) {
+        return;
+      }
+      call->SetType(GetBuiltinType(ast::BuiltinType::Nil));
+      break;
+    }
+    default:
+      UNREACHABLE("Undefined index creator call!");
+  }
+}
+
+
+
+
 void Sema::CheckBuiltinCall(ast::CallExpr *call) {
   ast::Builtin builtin;
   if (!GetContext()->IsBuiltinFunction(call->GetFuncName(), &builtin)) {
@@ -2485,6 +2595,14 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::InserterIndexInsert:
     case ast::Builtin::InserterFree: {
       CheckBuiltinInserterCall(call, builtin);
+      break;
+    }
+    case ast::Builtin::IndexCreatorInit:
+    case ast::Builtin::IndexCreatorInitBind:
+    case ast::Builtin::IndexCreatorGetIndexPR:
+    case ast::Builtin::IndexCreatorIndexInsert:
+    case ast::Builtin::IndexCreatorFree: {
+      CheckBuiltinIndexCreatorCall(call, builtin);
       break;
     }
     case ast::Builtin::DeleterInit:

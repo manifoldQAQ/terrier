@@ -16,6 +16,7 @@
 #include "execution/sql/functions/comparison_functions.h"
 #include "execution/sql/functions/is_null_predicate.h"
 #include "execution/sql/functions/string_functions.h"
+#include "execution/sql/index_creator.h"
 #include "execution/sql/index_iterator.h"
 #include "execution/sql/inserter.h"
 #include "execution/sql/join_hash_table.h"
@@ -254,7 +255,7 @@ VM_OP_HOT void OpPCIReset(terrier::execution::sql::ProjectedColumnsIterator *pci
 
 VM_OP_HOT void OpPCIResetFiltered(terrier::execution::sql::ProjectedColumnsIterator *pci) { pci->ResetFiltered(); }
 
-VM_OP_HOT void OpPCIGetTupleSlot(terrier::execution::sql::ProjectedColumnsIterator *pci) { pci->GetTupleSlot(); }
+VM_OP_HOT void OpPCIGetTupleSlot(terrier::storage::TupleSlot *ts, terrier::execution::sql::ProjectedColumnsIterator *pci) { *ts = pci->GetTupleSlot(); }
 
 VM_OP_HOT void OpPCIGetTinyInt(terrier::execution::sql::Integer *out,
                                terrier::execution::sql::ProjectedColumnsIterator *iter, uint16_t col_idx) {
@@ -1511,6 +1512,21 @@ VM_OP void OpInserterGetIndexPR(terrier::execution::sql::ProjectedRowWrapper *pr
 VM_OP void OpInserterIndexInsert(terrier::execution::sql::Inserter *inserter, uint32_t index_oid);
 
 VM_OP void OpInserterFree(terrier::execution::sql::Inserter *inserter);
+
+// IndexCreator Calls
+// ---------------------------------------------------------------
+
+VM_OP void OpIndexCreatorInit(terrier::execution::sql::IndexCreator *index_creator,
+                              terrier::execution::exec::ExecutionContext *exec_ctx, uint32_t index_oid, bool unique);
+
+VM_OP void OpIndexCreatorGetIndexPR(terrier::execution::sql::ProjectedRowWrapper *index_pr,
+                                    terrier::execution::sql::IndexCreator *index_creator);
+
+VM_OP void OpIndexCreatorIndexInsert(bool *ret, terrier::execution::sql::IndexCreator *index_creator,
+                                     terrier::execution::sql::ProjectedRowWrapper *index_pr,
+                                     terrier::storage::TupleSlot *tuple_slot);
+
+VM_OP void OpIndexCreatorFree(terrier::execution::sql::IndexCreator *index_creator);
 
 // Deleter Calls
 // ---------------------------------------------------------------
