@@ -22,6 +22,10 @@
 #include "execution/vm/llvm_engine.h"
 #include "execution/vm/module.h"
 
+#include "execution/compiler/expression_util.h"
+#include "execution/compiler/output_checker.h"
+
+
 namespace terrier::execution::compiler::test {
 
 class PRFillerTest : public SqlBasedTest {

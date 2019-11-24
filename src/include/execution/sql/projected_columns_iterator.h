@@ -70,6 +70,8 @@ class EXPORT ProjectedColumnsIterator {
   template <typename T, bool nullable>
   const T *Get(uint32_t col_idx, bool *null) const;
 
+  storage::TupleSlot GetTupleSlot() const;
+
   /**
    * Set the current iterator position
    * @tparam IsFiltered Is this iterator filtered?
@@ -265,6 +267,11 @@ inline const T *ProjectedColumnsIterator::Get(uint32_t col_idx, bool *null) cons
   }
   const T *col_data = reinterpret_cast<T *>(projected_column_->ColumnStart(static_cast<uint16_t>(col_idx)));
   return &col_data[curr_idx_];
+}
+
+inline storage::TupleSlot ProjectedColumnsIterator::GetTupleSlot() const {
+  const auto *tuple_slots = projected_column_->TupleSlots();
+  return tuple_slots[curr_idx_];
 }
 
 template <bool Filtered>

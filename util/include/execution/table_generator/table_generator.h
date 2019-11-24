@@ -181,11 +181,13 @@ class TableGenerator {
      */
     std::vector<IndexColumn> cols_;
 
+    bool fill_;
+
     /**
      * Constructors
      */
-    IndexInsertMeta(const char *index_name, const char *table_name, std::vector<IndexColumn> cols)
-        : index_name_(index_name), table_name_(table_name), cols_(std::move(cols)) {}
+    IndexInsertMeta(const char *index_name, const char *table_name, std::vector<IndexColumn> cols, bool fill)
+        : index_name_(index_name), table_name_(table_name), cols_(std::move(cols)), fill_{fill} {}
   };
 
   void InitTestIndexes();
