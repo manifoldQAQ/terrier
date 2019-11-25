@@ -13,6 +13,7 @@
 #include "parser/expression/column_value_expression.h"
 #include "storage/index/index_defs.h"
 #include "type/type_id.h"
+#include "execution/sql/projected_row_wrapper.h"
 
 namespace terrier {
 class StorageTestUtil;
@@ -24,6 +25,11 @@ class RecoveryManager;
 
 namespace terrier::tpcc {
 class Schemas;
+}
+
+namespace terrier::execution {
+namespace sql { class ProjectedRowWrapper; }
+namespace vm { class Module; }
 }
 
 namespace terrier::catalog {
@@ -279,6 +285,12 @@ class IndexSchema {
    */
   bool Immediate() const { return is_immediate_; }
 
+  void SetBuildKeyFunction(std::unique_ptr<execution::vm::Module> module,
+    std::function<void(execution::sql::ProjectedRowWrapper*, execution::sql::ProjectedRowWrapper*)> build_key_fn) const {
+    module_ = module.release();
+    build_key_fn_ = build_key_fn;
+  }
+
   /**
    * @return the backend that should be used to implement this index
    */
@@ -382,6 +394,18 @@ class IndexSchema {
   bool is_primary_;
   bool is_exclusion_;
   bool is_immediate_;
+  bool is_valid_;
+  bool is_ready_;
+  bool is_live_;
+  std::unordered_map<indexkeycol_oid_t, uint32_t> key_oid_to_offset;
+
+  mutable common::ManagedPointer<execution::vm::Module> module_;
+  mutable std::function<void(execution::sql::ProjectedRowWrapper*, execution::sql::ProjectedRowWrapper*)> build_key_fn_;
+
+
+  void SetValid(const bool is_valid) { is_valid_ = is_valid; }
+  void SetReady(const bool is_ready) { is_ready_ = is_ready; }
+  void SetLive(const bool is_live) { is_live_ = is_live; }
 
   friend class Catalog;
   friend class postgres::Builder;

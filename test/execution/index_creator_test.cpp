@@ -67,7 +67,10 @@ class IndexCreatorTest : public SqlBasedTest {
 };
 
 
-std::function<void(sql::ProjectedRowWrapper*, sql::ProjectedRowWrapper*)>
+std::pair<
+    std::function<void(sql::ProjectedRowWrapper*, sql::ProjectedRowWrapper*)>,
+    std::unique_ptr<vm::Module>
+        >
 testcompile(terrier::execution::exec::ExecutionContext *exec_ctx,
                                       terrier::catalog::table_oid_t table_oid,
                                       terrier::catalog::index_oid_t index_oid
@@ -114,35 +117,33 @@ testcompile(terrier::execution::exec::ExecutionContext *exec_ctx,
   // Now get the compiled function
   std::function<void(sql::ProjectedRowWrapper*, sql::ProjectedRowWrapper*)> filler_fn;
   TERRIER_ASSERT(module->GetFunction(fn_name, vm::ExecutionMode::Compiled, &filler_fn), "");
-  return filler_fn;
+  return {filler_fn, std::move(module)};
 }
 
 
 //// NOLINTNEXTLINE
-//TEST_F(IndexCreatorTest, CompileTest) {
-//  // Get Table Info
-//  auto accessor = exec_ctx_->GetAccessor();
-//  auto table_oid = accessor->GetTableOid("test_1");
-//  auto index_oid = accessor->GetIndexOid("index_1");
-//
-//  IndexCreator index_creator(exec_ctx_.get(), table_oid, index_oid, false);
-//
-//  auto table_pr = index_creator.GetTablePRWrapper();
-//  auto index_pr = index_creator.GetIndexPRWrapper();
-//
-//  auto filler_fn = testcompile(exec_ctx_.get(), table_oid, index_oid);
-//
-//  table_pr.Set<int32_t, false>(0, 500, false);
-//  filler_fn(&table_pr, &index_pr);
-//  auto val = index_pr.Get<int32_t, false>(0, nullptr);
-//  ASSERT_EQ(*val, 500);
-//
-//  table_pr.Set<int32_t, false>(0, 651, false);
-//  filler_fn(&table_pr, &index_pr);
-//  val = index_pr.Get<int32_t, false>(0, nullptr);
-//  ASSERT_EQ(*val, 651);
-//
-//}
+TEST_F(IndexCreatorTest, CompileTest1) {
+  // Get Table Info
+  auto txn = exec_ctx_->GetTxn();
+  auto accessor = exec_ctx_->GetAccessor();
+  auto table_oid = accessor->GetTableOid("test_1");
+  auto index_oid = accessor->GetIndexOid("empty_index_1");
+  auto table = exec_ctx_->GetAccessor()->GetTable(table_oid);
+
+  IndexCreator index_creator(exec_ctx_.get(), table_oid, index_oid, false);
+
+  auto table_pr = index_creator.GetTablePRWrapper();
+  auto index_pr = index_creator.GetIndexPRWrapper();
+
+  auto filler_fn = index_creator.GetBuildKeyFn();
+
+  for (auto it = table->begin(); it != table->end(); it++) {
+    if (table->Select(txn, *it, table_pr.Get())) {
+      filler_fn(&table_pr, &index_pr);
+      index_creator.IndexInsert(index_pr.Get(), *it);
+    }
+  }
+}
 
 
 // NOLINTNEXTLINE

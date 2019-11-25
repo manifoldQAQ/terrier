@@ -25,7 +25,9 @@ namespace terrier::execution::sql {
  */
 class EXPORT IndexCreator {
  public:
-  static std::function<void(sql::ProjectedRowWrapper*, sql::ProjectedRowWrapper*)>
+  static std::pair<
+      std::function<void(sql::ProjectedRowWrapper*, sql::ProjectedRowWrapper*)>,
+      std::unique_ptr<vm::Module>>
   CompileBuildKeyFunction(terrier::execution::exec::ExecutionContext *exec_ctx,
                                         terrier::catalog::table_oid_t table_oid,
                                         terrier::catalog::index_oid_t index_oid);
@@ -67,6 +69,7 @@ class EXPORT IndexCreator {
   exec::ExecutionContext *exec_ctx_;
   bool unique_;
 
+  std::unique_ptr<vm::Module> module_;
   std::function<void(sql::ProjectedRowWrapper*, sql::ProjectedRowWrapper*)> build_key_fn_;
 
   common::ManagedPointer<terrier::storage::SqlTable> table_;

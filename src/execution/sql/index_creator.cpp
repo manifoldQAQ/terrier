@@ -7,7 +7,9 @@
 
 namespace terrier::execution::sql {
 
-std::function<void(sql::ProjectedRowWrapper*, sql::ProjectedRowWrapper*)>
+std::pair<
+  std::function<void(sql::ProjectedRowWrapper*, sql::ProjectedRowWrapper*)>,
+  std::unique_ptr<vm::Module>>
     IndexCreator::CompileBuildKeyFunction(terrier::execution::exec::ExecutionContext *exec_ctx,
                                            terrier::catalog::table_oid_t table_oid,
                                            terrier::catalog::index_oid_t index_oid
@@ -33,6 +35,8 @@ std::function<void(sql::ProjectedRowWrapper*, sql::ProjectedRowWrapper*)>
   // Compile the function
   auto[root, fn_name]= filler.GenFiller(index_pm, index_schema);
 
+  std::cout << execution::ast::AstDump::Dump(root) << std::endl;
+
   // Create the query object, whose region must outlive all the processing.
   // Compile and check for errors
   EXECUTION_LOG_INFO("Generated File");
@@ -54,7 +58,7 @@ std::function<void(sql::ProjectedRowWrapper*, sql::ProjectedRowWrapper*)>
   // Now get the compiled function
   std::function<void(sql::ProjectedRowWrapper *, sql::ProjectedRowWrapper *)> filler_fn;
   TERRIER_ASSERT(module->GetFunction(fn_name, vm::ExecutionMode::Compiled, &filler_fn), "");
-  return filler_fn;
+  return {filler_fn, std::move(module)};
 }
 
 IndexCreator::IndexCreator(exec::ExecutionContext *exec_ctx,
@@ -64,8 +68,6 @@ IndexCreator::IndexCreator(exec::ExecutionContext *exec_ctx,
       table_pr_wrapper_{sql::ProjectedRowWrapper(nullptr)},
       index_pr_wrapper_{sql::ProjectedRowWrapper(nullptr)}
 {
-//  build_key_fn_ = CompileBuildKeyFunction(exec_ctx, table_oid, index_oid);
-
   index_ = exec_ctx->GetAccessor()->GetIndex(index_oid);
   auto index_pri = index_->GetProjectedRowInitializer();
   index_pr_size_ = index_pri.ProjectedRowSize();
@@ -84,6 +86,11 @@ IndexCreator::IndexCreator(exec::ExecutionContext *exec_ctx,
   table_pr_buffer_ = exec_ctx->GetMemoryPool()->AllocateAligned(table_pr_size_, sizeof(uint64_t), true);
   table_pr_ = table_pri.InitializeRow(table_pr_buffer_);
   table_pr_wrapper_ = sql::ProjectedRowWrapper(table_pr_);
+
+  auto res = CompileBuildKeyFunction(exec_ctx, table_oid, index_oid);
+  build_key_fn_ = res.first;
+//  module_ = std::move(res.second);
+  exec_ctx->GetAccessor()->GetIndexSchema(index_oid).SetBuildKeyFunction(std::move(res.second), build_key_fn_);
 }
 
 /**
