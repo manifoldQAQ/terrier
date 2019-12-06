@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "parser/expression/operator_expression.h"
 #include "execution/util/bit_util.h"
 #include "loggers/execution_logger.h"
 #include "parser/expression/column_value_expression.h"
@@ -293,7 +294,16 @@ void TableGenerator::InitTestIndexes() {
     std::vector<catalog::IndexSchema::Column> index_cols;
     for (const auto &col_meta : index_meta.cols_) {
       const auto &table_col = table_schema.GetColumn(col_meta.table_col_name_);
-      parser::ColumnValueExpression col_expr(table_oid, table_col.Oid(), table_col.Type());
+      parser::ColumnValueExpression col_expr(exec_ctx_->DBOid(), table_oid, table_col.Oid(), table_col.Type());
+
+
+      parser::ConstantValueExpression const_expr(type::TransientValueFactory::GetInteger(1));
+      std::vector<std::shared_ptr<parser::AbstractExpression>> children;
+      for (int i = 0; i < 3; i++)
+        children.push_back(col_expr.Copy());
+      parser::OperatorExpression oper_expr(parser::ExpressionType::OPERATOR_PLUS, type::TypeId::INTEGER, std::move(children));
+
+
       index_cols.emplace_back(col_meta.name_, col_meta.type_, col_meta.nullable_, col_expr);
     }
     catalog::IndexSchema tmp_index_schema{index_cols, storage::index::IndexType::BWTREE, false, false, false, false};

@@ -1,4 +1,4 @@
-g#include <gflags/gflags.h>
+#include <gflags/gflags.h>
 #include <unistd.h>
 #include <algorithm>
 #include <csignal>
